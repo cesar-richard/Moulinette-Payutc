@@ -36,6 +36,15 @@ Rappel des droits disponibles pour les wallets :
 7. **EDITACCESSRIGHT** : Édition des accès
 8. **ADMIN** : Tous les droits
 
+Rappel des droits disponibles pour les users :
+1. **POSS3** : Vente Physique
+2. **MESSAGE** : Gestion des messages personnalisés
+3. **STATS** : Consultations des statistiques de vente
+4. **STOCKS** : Gestion des stocks
+5. **MAKEINVENTORIES** : Réalisation d'inventaires
+6. **GESSALES** : Gestion des ventes
+7. **STAFF** : Responsable des lieux ou il peut vendre (eg: responsable de bar)
+8. **GESWIFICONFIGS** : Gestion des réseaux wifi
 
 ----------
 
