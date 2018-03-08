@@ -1,3 +1,4 @@
+# coding: utf8
 import csv 
 import sys, getopt, os.path
 import requests
@@ -20,15 +21,21 @@ headers = {
 def readCsv(inputfile,action,sessionid,fundation):
 	with open(inputfile, 'rb') as csvfile:
 		spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
-		if action=="addGroup":
+		if action=="addWalletToGroup":
 			lastparam=getWalletGroups(sessionid)
 			callable=addWalletToGroup
-		elif action=="addRight":
+		elif action=="addUserToGroup":
+			lastparam=getUserGroups(sessionid)
+			callable=addUserToGroup
+		elif action=="addWalletRight":
 			lastparam=fundation
 			callable=addRightToWallet
+		elif action=="addUserRight":
+			lastparam=fundation
+			callable=addRightToUser
 		for row in spamreader:
 			if(row[0]+row[1]+row[2]!=''):
-				callable(getWalletId(row[0]+' '+row[1]+' '+row[2],sessionid),row[3],sessionid,lastparam)
+				callable(getWallet(row[0]+' '+row[1]+' '+row[2],sessionid),row[3],sessionid,lastparam)
 				
 def getWalletGroups(sessionid):
 	print bcolors.HEADER + 'Getting wallet groups' + bcolors.ENDC
@@ -50,6 +57,28 @@ def getWalletGroups(sessionid):
 		print response.json()
 		sys.exit(9)
 
+def getUserGroups(sessionid):
+	print bcolors.HEADER + 'Getting user groups' + bcolors.ENDC
+
+	params = (
+	    ('system_id', 'payutc'),
+	    ('app_key', '0a93e8e18e6ed78fa50c4d74e949801b'),
+	    ('sessionid', sessionid),
+	)
+
+	data = '{"fun_id":null}'
+
+	response = requests.post('https://api.nemopay.net/services/GESGROUPS/getGroups', headers=headers, params=params, data=data)
+	if response.status_code==200:
+		ret = {}
+		for group in response.json():
+			ret[group['id']]=group['name']
+		return ret
+	else:
+		print bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC
+		print response.json()
+		sys.exit(9)
+
 def tranfert(walletsrc,walletdst,amount,message,sessionid):
 	print bcolors.HEADER + 'Transferring '+ str(amount/100.0) + ' from wallet ' + walletsrc + ' to wallet ' + walletdst + ' (' + message + ')' + bcolors.ENDC
 	params = (
@@ -61,16 +90,31 @@ def tranfert(walletsrc,walletdst,amount,message,sessionid):
 	if response.status_code==200:
 		ret = {}
 		for group in response.json():
-			ret[group['id']]=group['name']
+			ret[group['id']]=group['name'].encode('utf8')
 		return ret
 	else:
 		print bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC
 		print response.json()
 		sys.exit(9)
-		
-def getWalletId(user,sessionid):
 
-	print bcolors.OKBLUE + 'Getting ' + user + ' wallet id ' + bcolors.ENDC
+def addRightToUser(user,right,sessionid,fundation):
+	print bcolors.HEADER + 'Adding '+ right + ' permission to user ' + user['name'].encode('utf8') + bcolors.ENDC
+	params = (
+		('system_id', 'payutc'),
+		('sessionid', sessionid),
+	)
+	data = '{"fun_id":'+fundation+',"service":"'+right+'","usr_id":'+str(user['user_id'])+'}'
+	response = requests.post('https://api.nemopay.net/services/USERRIGHT/setUserRight', headers=headers, params=params, data=data)
+	if response.status_code==200:
+		print bcolors.OKGREEN + "OK" + bcolors.ENDC
+	else:
+		print bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC
+		print response.json()
+		sys.exit(9)
+		
+def getWallet(user,sessionid):
+
+	print bcolors.OKBLUE + 'Getting ' + user + ' wallet infos' + bcolors.ENDC
 	params = (
 		('system_id', 'payutc'),
 		('sessionid', sessionid),
@@ -87,7 +131,7 @@ def getWalletId(user,sessionid):
 		print bcolors.FAIL + "Exiting" + bcolors.ENDC
 		sys.exit(7)
 	elif response.status_code==200:
-		return str(response.json()[0]['id'])
+		return response.json()[0]
 	else:
 		print bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC
 		print response.json()
@@ -100,13 +144,31 @@ def addWalletToGroup(wallet,walletGroup,sessionid,walletgroups):
 		("sessionid", sessionid),
 	)
 
-	print bcolors.OKBLUE + 'Adding wallet ' + str(wallet) + ' to group ' + walletgroups[int(walletGroup)] + bcolors.ENDC
+	print bcolors.OKBLUE + 'Adding wallet ' + str(wallet['id']) + ' to group ' + walletgroups[int(walletGroup)].encode('utf8') + bcolors.ENDC
 
-	data = '{"wallet_id":'+str(wallet)+'}'
+	data = '{"wallet_id":'+str(wallet['id'])+'}'
 
 	response = requests.post('https://api.nemopay.net/resources/walletgroups/'+walletGroup+'/members', headers=headers, params=params, data=data)
 
 	if response.status_code == 204:
+		print bcolors.OKGREEN + "OK" + bcolors.ENDC
+	else:
+		print bcolors.FAIL + "FAIL (cannot add to group)" + bcolors.ENDC
+
+def addUserToGroup(user,userGroup,sessionid,usergroups):
+
+	params = (
+		("system_id", 'payutc'),
+		("sessionid", sessionid),
+	)
+
+	print bcolors.OKBLUE + 'Adding user ' + user['name'].encode('utf8') + ' to group ' + usergroups[int(userGroup)].encode('utf8') + bcolors.ENDC
+
+	data = '{"usr_id":'+str(user['user_id'])+',"grp_id":'+str(userGroup)+'}'
+
+	response = requests.post('https://api.nemopay.net/services/GESGROUPS/addUserToGroup', headers=headers, params=params, data=data)
+
+	if response.status_code == 200:
 		print bcolors.OKGREEN + "OK" + bcolors.ENDC
 	else:
 		print bcolors.FAIL + "FAIL (cannot add to group)" + bcolors.ENDC
@@ -118,9 +180,9 @@ def addRightToWallet(wallet,permission,sessionid,fundation):
 		("sessionid", sessionid),
 	)
 
-	print bcolors.OKBLUE + 'Adding permission ' + str(permission) + ' to wallet ' + str(wallet) + ' on fundation ' + str(fundation) + bcolors.ENDC
+	print bcolors.OKBLUE + 'Adding permission ' + str(permission) + ' to wallet ' + str(wallet['id']) + ' on fundation ' + str(fundation) + bcolors.ENDC
 
-	data = '{"obj":'+wallet+',"fundation":'+fundation+',"location":null,"event":1,"name":"'+permission+'"}'
+	data = '{"obj":'+wallet['id']+',"fundation":'+fundation+',"location":null,"event":1,"name":"'+permission+'"}'
 
 	response = requests.post('https://api.nemopay.net/resources/walletrights', headers=headers, params=params, data=data)
 
@@ -177,7 +239,7 @@ def main(argv):
 	username = ''
 	password = ''
 	fundation = 'null'
-	helper = sys.argv[0] + ' -i <inputfile> -a <addGroup|addRight> -u <casUsername> -p <casPassword> [-f <fundationid>]'
+	helper = sys.argv[0] + ' -i <inputfile> -a <addWalletToGroup|addUserToGroup|addWalletRight|addUserRight> -u <casUsername> -p <casPassword> [-f <fundationid>]'
 	try:
 		opts, args = getopt.getopt(argv,"hu:p:f:i:a:",["help","ifile=","action=","username=","password=","fundation="])
 	except getopt.GetoptError as msg:
@@ -195,7 +257,7 @@ def main(argv):
 				print bcolors.FAIL + "FAIL ( file " + arg + " does not exist )" + bcolors.ENDC
 				sys.exit(3)
 		elif opt in ("-a", "--action"):
-			if arg == "addGroup" or arg == "addRight":
+			if arg == "addWalletToGroup" or arg == "addUserToGroup" or arg == "addWalletRight" or arg == "addUserRight":
 				action = arg
 			else:
 				print bcolors.FAIL + "FAIL ( " + arg + " is not a valid action )" + bcolors.ENDC
