@@ -6,7 +6,7 @@ Dans la version actuelle il faut recuperer un id de session existant en se conne
 
 ## Utilisation
 ```bash
-python nemopay-mini-cli.py -i <inputfile> -a <addGroup|addRight> -u <casUsername> -p <casPassword> [-f <fundationid>]
+python nemopay-mini-cli.py -i <inputfile> -a <addWalletToGroup|addUserToGroup|addWalletRight|addUserRight> -u <casUsername> -p <casPassword> [-f <fundationid>]
 ```
 
 * **-i ou --inputfile** : fichier au format CSV contenant les modifications à apporter (structure du fichier plus bas)
@@ -18,7 +18,7 @@ python nemopay-mini-cli.py -i <inputfile> -a <addGroup|addRight> -u <casUsername
 ## Structure du fichier d'entrée
  Les entêtes ne sont pas à recopier dans le fichier d'entrée, ils sont donnés ici à titre d'explication.
 
-### Action addRight
+### Action addWalletRight ou addUserRight
 Noter que le paramètre -f permet de ne donner les permission que sur 1 fondation particulière.
 
 | Prenom | Nom | Login | Permission |
@@ -26,7 +26,7 @@ Noter que le paramètre -f permet de ne donner les permission que sur 1 fondatio
 | Cesar | Richard | cerichar | SALE |
 | Quentin | Richard | qrichard | SALE |
 
-Rappel des droits disponibles :
+Rappel des droits disponibles pour les wallets :
 1. **SALE** : Vente
 2. **RELOAD** : Rechargement
 3. **ACCESSCONTROL** : Contrôle des accès
@@ -40,9 +40,9 @@ Rappel des droits disponibles :
 ----------
 
 
-### Action addGroup
+### Action addWalletToGroup ou addUserToGroup
 
-| Prenom | Nom | Login | Id du WalletGroup |
+| Prenom | Nom | Login | Id du groupe |
 |--|--|--|--|
 | Cesar | Richard | cerichar | 4 |
 | Quentin | Richard | qrichard | 3 |
