@@ -3,15 +3,16 @@ import csv
 import sys, getopt, os.path
 import requests
 import urllib
+import getpass
 class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+	HEADER = '\033[95m'
+	OKBLUE = '\033[94m'
+	OKGREEN = '\033[92m'
+	WARNING = '\033[93m'
+	FAIL = '\033[91m'
+	ENDC = '\033[0m'
+	BOLD = '\033[1m'
+	UNDERLINE = '\033[4m'
 
 headers = {
 		'Content-Type': 'application/json',
@@ -33,6 +34,9 @@ def readCsv(inputfile,action,sessionid,fundation):
 		elif action=="addUserRight":
 			lastparam=fundation
 			callable=addRightToUser
+		elif action=="addGratuitees":
+			lastparam=fundation
+			callable=addGratuitees
 		for row in spamreader:
 			if(row[0]+row[1]+row[2]!=''):
 				callable(getWallet(row[0]+' '+row[1]+' '+row[2],sessionid),row[3],sessionid,lastparam)
@@ -56,14 +60,33 @@ def getWalletGroups(sessionid):
 		print bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC
 		print response.json()
 		sys.exit(9)
+		
+def addGratuitees(wallet,qte,sessionid,currency):
+
+	params = (
+		('system_id', 'payutc'),
+		('sessionid', sessionid),
+		('id__in',str(wallet['id']))
+	)
+
+	print bcolors.OKBLUE + 'Adding '+ str(int(qte)*100) + ' of currency ' + str(currency) + ' to ' + str(wallet['id']) + bcolors.ENDC
+
+	data = '{"action_set":[{"currency":' + str(currency) + ',"quantity":' + str(int(qte)*100) + ',"kind":"add","refill_kind":"Gratuités"}]}'
+	response = requests.post('https://api.nemopay.net/resources/wallets/batch_refill', headers=headers, params=params, data=data)
+
+	if response.status_code == 201:
+		print bcolors.OKGREEN + "OK" + bcolors.ENDC
+	else:
+		print bcolors.FAIL + "FAIL (cannot add Gratuites)" + bcolors.ENDC
+		print response.text
 
 def getUserGroups(sessionid):
 	print bcolors.HEADER + 'Getting user groups' + bcolors.ENDC
 
 	params = (
-	    ('system_id', 'payutc'),
-	    ('app_key', '0a93e8e18e6ed78fa50c4d74e949801b'),
-	    ('sessionid', sessionid),
+		('system_id', 'payutc'),
+		('app_key', '0a93e8e18e6ed78fa50c4d74e949801b'),
+		('sessionid', sessionid),
 	)
 
 	data = '{"fun_id":null}'
@@ -232,6 +255,29 @@ def loginCas2(username,password):
 		print bcolors.OKGREEN + "Logged in via CAS as " + response.json()['username'] + bcolors.ENDC
 	
 	return response.json()
+
+def win_getpass(prompt='Password: ', stream=None):
+	"""Prompt for password with echo off, using Windows getch()."""
+	import msvcrt
+	for c in prompt:
+		msvcrt.putch(c)
+	pw = ""
+	while 1:
+		c = msvcrt.getch()
+		if c == '\r' or c == '\n':
+			break
+		if c == '\003':
+			raise KeyboardInterrupt
+		if c == '\b':
+			pw = pw[:-1]
+			msvcrt.putch('\b')
+		else:
+			pw = pw + c
+			msvcrt.putch("*")
+	msvcrt.putch('\r')
+	msvcrt.putch('\n')
+	return pw
+
 def main(argv):
 	action = ''
 	sessionid = ''
@@ -239,9 +285,9 @@ def main(argv):
 	username = ''
 	password = ''
 	fundation = 'null'
-	helper = sys.argv[0] + ' -i <inputfile> -a <addWalletToGroup|addUserToGroup|addWalletRight|addUserRight> -u <casUsername> -p <casPassword> [-f <fundationid>]'
+	helper = sys.argv[0] + ' -i <inputfile> -a <addWalletToGroup|addUserToGroup|addWalletRight|addUserRight|addGratuitees> -u <casUsername> -p <casPassword> [-f <fundationid>]'
 	try:
-		opts, args = getopt.getopt(argv,"hu:p:f:i:a:",["help","ifile=","action=","username=","password=","fundation="])
+		opts, args = getopt.getopt(argv,"hp:u:f:i:a:",["help","password","ifile=","action=","username=","fundation="])
 	except getopt.GetoptError as msg:
 		print msg
 		print helper
@@ -257,7 +303,7 @@ def main(argv):
 				print bcolors.FAIL + "FAIL ( file " + arg + " does not exist )" + bcolors.ENDC
 				sys.exit(3)
 		elif opt in ("-a", "--action"):
-			if arg == "addWalletToGroup" or arg == "addUserToGroup" or arg == "addWalletRight" or arg == "addUserRight":
+			if arg in ("addWalletToGroup","addUserToGroup","addWalletRight","addUserRight","addGratuitees"):
 				action = arg
 			else:
 				print bcolors.FAIL + "FAIL ( " + arg + " is not a valid action )" + bcolors.ENDC
@@ -268,10 +314,15 @@ def main(argv):
 			password = arg
 		elif opt in ("-f", "--fundation"):
 			fundation = str(arg)
+	if password == '':
+		print "Type CAS password"
+		password = win_getpass()
 	if action == '' or inputfile == '' or fundation == '' or username == '' or password == '':
 		print "One or more required parameter is missing"
 		print helper
 		sys.exit(5)
+	print username
+	print password
 	sessionid=loginCas2(username,password)['sessionid']
 	readCsv(inputfile,action,sessionid,fundation)
 	
