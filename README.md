@@ -23,18 +23,20 @@ Noter que le paramètre -f permet de ne donner les permission que sur 1 fondatio
 
 | Prenom | Nom | Login | Permission |
 |--|--|--|--|
-| Cesar | Richard | cerichar | SALE |
-| Quentin | Richard | qrichard | SALE |
+| Cesar | Richard | cerichar | SALES |
+| Cesar | Richard | cerichar | STAFF |
+| Quentin | Richard | qrichard | SALES |
 
 Rappel des droits disponibles pour les wallets :
-1. **SALE** : Vente
-2. **RELOAD** : Rechargement
-3. **ACCESSCONTROL** : Contrôle des accès
-4. **ASSISTANCE** : Assistance
-5. **PAIRING** : Appairage 
-6. **STOCK** : Gestion des stocks 
-7. **EDITACCESSRIGHT** : Édition des accès
-8. **ADMIN** : Tous les droits
+1. **SALES** : Vente
+2. **STAFF** : Responsable des lieux ou il peut vendre
+3. **RELOAD** : Rechargement
+4. **ACCESSCONTROL** : Contrôle des accès
+5. **ASSISTANCE** : Assistance
+6. **PAIRING** : Appairage 
+7. **STOCK** : Gestion des stocks 
+8. **EDITACCESSRIGHT** : Édition des accès
+9. **ADMIN** : Tous les droits
 
 Rappel des droits disponibles pour les users :
 1. **POSS3** : Vente Physique

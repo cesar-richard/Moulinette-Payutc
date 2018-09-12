@@ -2,7 +2,7 @@
 import csv 
 import sys, getopt, os.path
 import requests
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import getpass
 class bcolors:
 	HEADER = '\033[95m'
@@ -20,7 +20,7 @@ headers = {
 }
 
 def readCsv(inputfile,action,sessionid,fundation):
-	with open(inputfile, 'rb') as csvfile:
+	with open(inputfile, 'rt') as csvfile:
 		spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
 		if action=="addWalletToGroup":
 			lastparam=getWalletGroups(sessionid)
@@ -42,7 +42,7 @@ def readCsv(inputfile,action,sessionid,fundation):
 				callable(getWallet(row[0]+' '+row[1]+' '+row[2],sessionid),row[3],sessionid,lastparam)
 				
 def getWalletGroups(sessionid):
-	print bcolors.HEADER + 'Getting wallet groups' + bcolors.ENDC
+	print(bcolors.HEADER + 'Getting wallet groups' + bcolors.ENDC)
 	params = (
 		('event', '1'),
 		('ordering', 'id'),
@@ -57,8 +57,8 @@ def getWalletGroups(sessionid):
 			ret[group['id']]=group['name']
 		return ret
 	else:
-		print bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC
-		print response.json()
+		print(bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC)
+		print(response.json())
 		sys.exit(9)
 		
 def addGratuitees(wallet,qte,sessionid,currency):
@@ -69,19 +69,19 @@ def addGratuitees(wallet,qte,sessionid,currency):
 		('id__in',str(wallet['id']))
 	)
 
-	print bcolors.OKBLUE + 'Adding '+ str(int(qte)*100) + ' of currency ' + str(currency) + ' to ' + str(wallet['id']) + bcolors.ENDC
+	print(bcolors.OKBLUE + 'Adding '+ str(int(qte)*100) + ' of currency ' + str(currency) + ' to ' + str(wallet['id']) + bcolors.ENDC)
 
 	data = '{"action_set":[{"currency":' + str(currency) + ',"quantity":' + str(int(qte)*100) + ',"kind":"add","refill_kind":"Gratuités"}]}'
 	response = requests.post('https://api.nemopay.net/resources/wallets/batch_refill', headers=headers, params=params, data=data)
 
 	if response.status_code == 201:
-		print bcolors.OKGREEN + "OK" + bcolors.ENDC
+		print(bcolors.OKGREEN + "OK" + bcolors.ENDC)
 	else:
-		print bcolors.FAIL + "FAIL (cannot add Gratuites)" + bcolors.ENDC
-		print response.text
+		print(bcolors.FAIL + "FAIL (cannot add Gratuites)" + bcolors.ENDC)
+		print(response.text)
 
 def getUserGroups(sessionid):
-	print bcolors.HEADER + 'Getting user groups' + bcolors.ENDC
+	print(bcolors.HEADER + 'Getting user groups' + bcolors.ENDC)
 
 	params = (
 		('system_id', 'payutc'),
@@ -98,12 +98,12 @@ def getUserGroups(sessionid):
 			ret[group['id']]=group['name']
 		return ret
 	else:
-		print bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC
-		print response.json()
+		print(bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC)
+		print(response.json())
 		sys.exit(9)
 
 def tranfert(walletsrc,walletdst,amount,message,sessionid):
-	print bcolors.HEADER + 'Transferring '+ str(amount/100.0) + ' from wallet ' + walletsrc + ' to wallet ' + walletdst + ' (' + message + ')' + bcolors.ENDC
+	print(bcolors.HEADER + 'Transferring '+ str(amount/100.0) + ' from wallet ' + walletsrc + ' to wallet ' + walletdst + ' (' + message + ')' + bcolors.ENDC)
 	params = (
 		('system_id', 'payutc'),
 		('sessionid', sessionid),
@@ -116,12 +116,12 @@ def tranfert(walletsrc,walletdst,amount,message,sessionid):
 			ret[group['id']]=group['name'].encode('utf8')
 		return ret
 	else:
-		print bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC
-		print response.json()
+		print(bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC)
+		print(response.json())
 		sys.exit(9)
 
 def addRightToUser(user,right,sessionid,fundation):
-	print bcolors.HEADER + 'Adding '+ right + ' permission to user ' + user['name'].encode('utf8') + bcolors.ENDC
+	print(bcolors.HEADER + 'Adding '+ right + ' permission to user ' + user['name'].encode('utf8') + bcolors.ENDC)
 	params = (
 		('system_id', 'payutc'),
 		('sessionid', sessionid),
@@ -129,15 +129,15 @@ def addRightToUser(user,right,sessionid,fundation):
 	data = '{"fun_id":'+fundation+',"service":"'+right+'","usr_id":'+str(user['user_id'])+'}'
 	response = requests.post('https://api.nemopay.net/services/USERRIGHT/setUserRight', headers=headers, params=params, data=data)
 	if response.status_code==200:
-		print bcolors.OKGREEN + "OK" + bcolors.ENDC
+		print(bcolors.OKGREEN + "OK" + bcolors.ENDC)
 	else:
-		print bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC
-		print response.json()
+		print(bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC)
+		print(response.json())
 		sys.exit(9)
 		
 def getWallet(user,sessionid):
 
-	print bcolors.OKBLUE + 'Getting ' + user + ' wallet infos' + bcolors.ENDC
+	print(bcolors.OKBLUE + 'Getting ' + user + ' wallet infos' + bcolors.ENDC)
 	params = (
 		('system_id', 'payutc'),
 		('sessionid', sessionid),
@@ -146,18 +146,18 @@ def getWallet(user,sessionid):
 
 	response = requests.post('https://api.nemopay.net/services/GESUSERS/walletAutocomplete', headers=headers, params=params, data=data)
 	if response.status_code == 403:
-		print bcolors.FAIL + "FAIL (Forbidden, maybe a bad session id is used)" + bcolors.ENDC
-		print bcolors.FAIL + "Exiting" + bcolors.ENDC
+		print(bcolors.FAIL + "FAIL (Forbidden, maybe a bad session id is used)" + bcolors.ENDC)
+		print(bcolors.FAIL + "Exiting" + bcolors.ENDC)
 		sys.exit(6)
 	elif response.json() == []:
-		print bcolors.FAIL + "FAIL (account not found)" + bcolors.ENDC
-		print bcolors.FAIL + "Exiting" + bcolors.ENDC
+		print(bcolors.FAIL + "FAIL (account not found)" + bcolors.ENDC)
+		print(bcolors.FAIL + "Exiting" + bcolors.ENDC)
 		sys.exit(7)
 	elif response.status_code==200:
 		return response.json()[0]
 	else:
-		print bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC
-		print response.json()
+		print(bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC)
+		print(response.json())
 		sys.exit(8)
 			
 def addWalletToGroup(wallet,walletGroup,sessionid,walletgroups):
@@ -167,16 +167,16 @@ def addWalletToGroup(wallet,walletGroup,sessionid,walletgroups):
 		("sessionid", sessionid),
 	)
 
-	print bcolors.OKBLUE + 'Adding wallet ' + str(wallet['id']) + ' to group ' + walletgroups[int(walletGroup)].encode('utf8') + bcolors.ENDC
+	print(bcolors.OKBLUE + 'Adding wallet ' + str(wallet['id']) + ' to group ' + walletgroups[int(walletGroup)].encode('utf8') + bcolors.ENDC)
 
 	data = '{"wallet_id":'+str(wallet['id'])+'}'
 
 	response = requests.post('https://api.nemopay.net/resources/walletgroups/'+walletGroup+'/members', headers=headers, params=params, data=data)
 
 	if response.status_code == 204:
-		print bcolors.OKGREEN + "OK" + bcolors.ENDC
+		print(bcolors.OKGREEN + "OK" + bcolors.ENDC)
 	else:
-		print bcolors.FAIL + "FAIL (cannot add to group)" + bcolors.ENDC
+		print(bcolors.FAIL + "FAIL (cannot add to group)" + bcolors.ENDC)
 
 def addUserToGroup(user,userGroup,sessionid,usergroups):
 
@@ -185,16 +185,16 @@ def addUserToGroup(user,userGroup,sessionid,usergroups):
 		("sessionid", sessionid),
 	)
 
-	print bcolors.OKBLUE + 'Adding user ' + user['name'].encode('utf8') + ' to group ' + usergroups[int(userGroup)].encode('utf8') + bcolors.ENDC
+	print(bcolors.OKBLUE + 'Adding user ' + user['name'].encode('utf8') + ' to group ' + usergroups[int(userGroup)].encode('utf8') + bcolors.ENDC)
 
 	data = '{"usr_id":'+str(user['user_id'])+',"grp_id":'+str(userGroup)+'}'
 
 	response = requests.post('https://api.nemopay.net/services/GESGROUPS/addUserToGroup', headers=headers, params=params, data=data)
 
 	if response.status_code == 200:
-		print bcolors.OKGREEN + "OK" + bcolors.ENDC
+		print(bcolors.OKGREEN + "OK" + bcolors.ENDC)
 	else:
-		print bcolors.FAIL + "FAIL (cannot add to group)" + bcolors.ENDC
+		print(bcolors.FAIL + "FAIL (cannot add to group)" + bcolors.ENDC)
 		
 def addRightToWallet(wallet,permission,sessionid,fundation):
 
@@ -203,16 +203,16 @@ def addRightToWallet(wallet,permission,sessionid,fundation):
 		("sessionid", sessionid),
 	)
 
-	print bcolors.OKBLUE + 'Adding permission ' + str(permission) + ' to wallet ' + str(wallet['id']) + ' on fundation ' + str(fundation) + bcolors.ENDC
+	print(bcolors.OKBLUE + 'Adding permission ' + str(permission) + ' to wallet ' + str(wallet['id']) + ' on fundation ' + str(fundation) + bcolors.ENDC)
 
-	data = '{"obj":'+wallet['id']+',"fundation":'+fundation+',"location":null,"event":1,"name":"'+permission+'"}'
+	data = '{"obj":'+str(wallet['id'])+',"fundation":'+str(fundation)+',"location":null,"event":1,"name":"'+permission+'"}'
 
 	response = requests.post('https://api.nemopay.net/resources/walletrights', headers=headers, params=params, data=data)
 
 	if response.status_code == 201:
-		print bcolors.OKGREEN + "OK" + bcolors.ENDC
+		print(bcolors.OKGREEN + "OK" + bcolors.ENDC)
 	else:
-		print bcolors.FAIL + "FAIL (cannot add permission)" + bcolors.ENDC
+		print(bcolors.FAIL + "FAIL (cannot add permission)" + bcolors.ENDC)
 		
 def loginCas2(username,password):
 	params = (
@@ -220,7 +220,7 @@ def loginCas2(username,password):
 		('app_key', '0a93e8e18e6ed78fa50c4d74e949801b'),
 	)
 
-	print bcolors.OKBLUE + 'Loggin CAS ' + username + bcolors.ENDC
+	print(bcolors.OKBLUE + 'Loggin CAS ' + username + bcolors.ENDC)
 
 	service = 'http://localhost/nemopay-mini-cli/login'
 	casurl = requests.post('https://api.nemopay.net/services/ROSETTINGS/getCasUrl', headers=headers, params=params).json()
@@ -229,14 +229,13 @@ def loginCas2(username,password):
 		'Accept': 'text/plain',
 		'User-Agent':'python'
 	}
-	paramscas = urllib.urlencode({
+	paramscas = urllib.parse.urlencode({
 		'service': service,
 		'username': username,
 		'password': password
 	})
 	
 	response = requests.post(casurl+'/v1/tickets/', headers=headerscas, params=paramscas)
-	
 	location = response.headers['location']
 	tgt = location[location.rfind('/') + 1:]
 	
@@ -252,7 +251,7 @@ def loginCas2(username,password):
 	
 	response = requests.post('https://api.nemopay.net/services/MYACCOUNT/loginCas2', headers=headers, params=params, data=data)
 	if response.status_code == 200:
-		print bcolors.OKGREEN + "Logged in via CAS as " + response.json()['username'] + bcolors.ENDC
+		print(bcolors.OKGREEN + "Logged in via CAS as " + response.json()['username'] + bcolors.ENDC)
 	
 	return response.json()
 
@@ -260,7 +259,7 @@ def win_getpass(prompt='Password: ', stream=None):
 	"""Prompt for password with echo off, using Windows getch()."""
 	import msvcrt
 	for c in prompt:
-		msvcrt.putch(c)
+		msvcrt.putch(c.encode()[:1])
 	pw = ""
 	while 1:
 		c = msvcrt.getch()
@@ -273,7 +272,7 @@ def win_getpass(prompt='Password: ', stream=None):
 			msvcrt.putch('\b')
 		else:
 			pw = pw + c
-			msvcrt.putch("*")
+			msvcrt.putch('*')
 	msvcrt.putch('\r')
 	msvcrt.putch('\n')
 	return pw
@@ -289,24 +288,24 @@ def main(argv):
 	try:
 		opts, args = getopt.getopt(argv,"hp:u:f:i:a:",["help","password","ifile=","action=","username=","fundation="])
 	except getopt.GetoptError as msg:
-		print msg
-		print helper
+		print(msg)
+		print(helper)
 		sys.exit(2)
 	for opt, arg in opts:
 		if opt == '-h':
-			print helper
+			print(helper)
 			sys.exit()
 		elif opt in ("-i", "--inputfile"):
 			if os.path.isfile(os.path.abspath(arg)):
 				inputfile = arg			
 			else:
-				print bcolors.FAIL + "FAIL ( file " + arg + " does not exist )" + bcolors.ENDC
+				print(bcolors.FAIL + "FAIL ( file " + arg + " does not exist )" + bcolors.ENDC)
 				sys.exit(3)
 		elif opt in ("-a", "--action"):
 			if arg in ("addWalletToGroup","addUserToGroup","addWalletRight","addUserRight","addGratuitees"):
 				action = arg
 			else:
-				print bcolors.FAIL + "FAIL ( " + arg + " is not a valid action )" + bcolors.ENDC
+				print(bcolors.FAIL + "FAIL ( " + arg + " is not a valid action )" + bcolors.ENDC)
 				sys.exit(4)
 		elif opt in ("-u", "--username"):
 			username = arg
@@ -315,14 +314,14 @@ def main(argv):
 		elif opt in ("-f", "--fundation"):
 			fundation = str(arg)
 	if password == '':
-		print "Type CAS password"
+		print("Type CAS password")
 		password = win_getpass()
 	if action == '' or inputfile == '' or fundation == '' or username == '' or password == '':
-		print "One or more required parameter is missing"
-		print helper
+		print("One or more required parameter is missing")
+		print(helper)
 		sys.exit(5)
-	print username
-	print password
+	print(username)
+	print(password)
 	sessionid=loginCas2(username,password)['sessionid']
 	readCsv(inputfile,action,sessionid,fundation)
 	
