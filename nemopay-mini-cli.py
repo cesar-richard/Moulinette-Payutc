@@ -1,9 +1,10 @@
 # coding: utf8
 import csv 
 import sys, getopt, os.path
+import urllib
 import requests
-import urllib.request, urllib.parse, urllib.error
-import getpass
+import json
+
 class bcolors:
 	HEADER = '\033[95m'
 	OKBLUE = '\033[94m'
@@ -14,10 +15,22 @@ class bcolors:
 	BOLD = '\033[1m'
 	UNDERLINE = '\033[4m'
 
+config = {}
+
 headers = {
 		'Content-Type': 'application/json',
-		'Nemopay-Version': '2017-12-15',
+		'Nemopay-Version': '2019-06-11'
 }
+
+def readConfigFile(configfile):
+	with open(configfile, 'r') as configfile:
+		content = configfile.read()
+		content_json = json.loads(content)
+		content_encoded = {}
+		for key in content_json.keys():
+			encoded_key = key.encode('utf-8')
+			content_encoded[encoded_key] = content_json[key]
+		return content_encoded
 
 def readCsv(inputfile,action,sessionid,fundation):
 	with open(inputfile, 'rt') as csvfile:
@@ -39,17 +52,18 @@ def readCsv(inputfile,action,sessionid,fundation):
 			callable=addGratuitees
 		for row in spamreader:
 			if(row[0]+row[1]+row[2]!=''):
-				callable(getWallet(row[0]+' '+row[1]+' '+row[2],sessionid),row[3],sessionid,lastparam)
-				
+				callable(getWallet(row[0] + ' ' + row[1] + ' ' + row[2], sessionid), row[3], sessionid, lastparam)
+
 def getWalletGroups(sessionid):
 	print(bcolors.HEADER + 'Getting wallet groups' + bcolors.ENDC)
 	params = (
 		('event', '1'),
 		('ordering', 'id'),
-		('system_id', 'payutc'),
+		('system_id', config['system_id']),
 		('active', True),
-		('sessionid', sessionid),
 	)
+	if not config['authorization']:
+		params = params + (('sessionid', sessionid),)
 	response = requests.get('https://api.nemopay.net/resources/walletgroups', headers=headers, params=params)
 	if response.status_code==200:
 		ret = {}
@@ -64,14 +78,15 @@ def getWalletGroups(sessionid):
 def addGratuitees(wallet,qte,sessionid,currency):
 
 	params = (
-		('system_id', 'payutc'),
-		('sessionid', sessionid),
+		('system_id', config['system_id']),
 		('id__in',str(wallet['id']))
 	)
+	if not config['authorization']:
+		params = params + (('sessionid', sessionid),)
 
-	print(bcolors.OKBLUE + 'Adding '+ str(int(qte)*100) + ' of currency ' + str(currency) + ' to ' + str(wallet['id']) + bcolors.ENDC)
+	print(bcolors.OKBLUE + 'Setting '+ str(int(qte)*100) + ' of currency ' + str(currency) + ' to ' + str(wallet['id']) + bcolors.ENDC)
 
-	data = '{"action_set":[{"currency":' + str(currency) + ',"quantity":' + str(int(qte)*100) + ',"kind":"add","refill_kind":"Gratuités"}]}'
+	data = '{"action_set":[{"currency":' + str(currency) + ',"quantity":' + str(int(qte)*100) + ',"kind":"set","refill_kind":"Gratuités"}]}'
 	response = requests.post('https://api.nemopay.net/resources/wallets/batch_refill', headers=headers, params=params, data=data)
 
 	if response.status_code == 201:
@@ -84,10 +99,11 @@ def getUserGroups(sessionid):
 	print(bcolors.HEADER + 'Getting user groups' + bcolors.ENDC)
 
 	params = (
-		('system_id', 'payutc'),
+		('system_id', config['system_id']),
 		('app_key', '0a93e8e18e6ed78fa50c4d74e949801b'),
-		('sessionid', sessionid),
 	)
+	if not config['authorization']:
+		params = params + (('sessionid', sessionid),)
 
 	data = '{"fun_id":null}'
 
@@ -105,9 +121,10 @@ def getUserGroups(sessionid):
 def tranfert(walletsrc,walletdst,amount,message,sessionid):
 	print(bcolors.HEADER + 'Transferring '+ str(amount/100.0) + ' from wallet ' + walletsrc + ' to wallet ' + walletdst + ' (' + message + ')' + bcolors.ENDC)
 	params = (
-		('system_id', 'payutc'),
-		('sessionid', sessionid),
+		('system_id', config['system_id']),
 	)
+	if not config['authorization']:
+		params = params + (('sessionid', sessionid),)
 	data = '{"wallet_src":'+walletsrc+',"wallet_dst":'+walletdst+',"amount":'+amount+',"message":"'+message+'"}'
 	response = requests.post('https://api.nemopay.net/services/GESUSERS/transfer', headers=headers, params=params, data=data)
 	if response.status_code==200:
@@ -123,9 +140,10 @@ def tranfert(walletsrc,walletdst,amount,message,sessionid):
 def addRightToUser(user,right,sessionid,fundation):
 	print(bcolors.HEADER + 'Adding '+ right + ' permission to user ' + user['name'].encode('utf8') + bcolors.ENDC)
 	params = (
-		('system_id', 'payutc'),
-		('sessionid', sessionid),
+		('system_id', config['system_id']),
 	)
+	if not config['authorization']:
+		params = params + (('sessionid', sessionid),)
 	data = '{"fun_id":'+fundation+',"service":"'+right+'","usr_id":'+str(user['user_id'])+'}'
 	response = requests.post('https://api.nemopay.net/services/USERRIGHT/setUserRight', headers=headers, params=params, data=data)
 	if response.status_code==200:
@@ -139,10 +157,11 @@ def getWallet(user,sessionid):
 
 	print(bcolors.OKBLUE + 'Getting ' + user + ' wallet infos' + bcolors.ENDC)
 	params = (
-		('system_id', 'payutc'),
-		('sessionid', sessionid),
+		('system_id', config['system_id']),
 	)
-	data = '{"queryString":"'+str(user)+'","wallet_config":1}'
+	if not config['authorization']:
+		params = params + (('sessionid', sessionid),)
+	data = '{"queryString":"'+str(user)+'","wallet_config":5}'
 
 	response = requests.post('https://api.nemopay.net/services/GESUSERS/walletAutocomplete', headers=headers, params=params, data=data)
 	if response.status_code == 403:
@@ -154,6 +173,10 @@ def getWallet(user,sessionid):
 		print(bcolors.FAIL + "Exiting" + bcolors.ENDC)
 		sys.exit(7)
 	elif response.status_code==200:
+		if len(response.json()) > 1:
+			print(bcolors.FAIL + "More than 1 account found" + bcolors.ENDC)
+			print(bcolors.FAIL + "Exiting" + bcolors.ENDC)
+			sys.exit(9)
 		return response.json()[0]
 	else:
 		print(bcolors.FAIL + "FAIL (unhandled error)" + bcolors.ENDC)
@@ -163,9 +186,10 @@ def getWallet(user,sessionid):
 def addWalletToGroup(wallet,walletGroup,sessionid,walletgroups):
 
 	params = (
-		("system_id", 'payutc'),
-		("sessionid", sessionid),
+		("system_id", config['system_id']),
 	)
+	if not config['authorization']:
+		params = params + (('sessionid', sessionid),)
 
 	print(bcolors.OKBLUE + 'Adding wallet ' + str(wallet['id']) + ' to group ' + walletgroups[int(walletGroup)].encode('utf8') + bcolors.ENDC)
 
@@ -181,9 +205,10 @@ def addWalletToGroup(wallet,walletGroup,sessionid,walletgroups):
 def addUserToGroup(user,userGroup,sessionid,usergroups):
 
 	params = (
-		("system_id", 'payutc'),
-		("sessionid", sessionid),
+		("system_id", config['system_id']),
 	)
+	if not config['authorization']:
+		params = params + (('sessionid', sessionid),)
 
 	print(bcolors.OKBLUE + 'Adding user ' + user['name'].encode('utf8') + ' to group ' + usergroups[int(userGroup)].encode('utf8') + bcolors.ENDC)
 
@@ -199,9 +224,10 @@ def addUserToGroup(user,userGroup,sessionid,usergroups):
 def addRightToWallet(wallet,permission,sessionid,fundation):
 
 	params = (
-		("system_id", 'payutc'),
-		("sessionid", sessionid),
+		("system_id", config['system_id']),
 	)
+	if not config['authorization']:
+		params = params + (('sessionid', sessionid),)
 
 	print(bcolors.OKBLUE + 'Adding permission ' + str(permission) + ' to wallet ' + str(wallet['id']) + ' on fundation ' + str(fundation) + bcolors.ENDC)
 
@@ -216,7 +242,7 @@ def addRightToWallet(wallet,permission,sessionid,fundation):
 		
 def loginCas2(username,password):
 	params = (
-		('system_id', 'payutc'),
+		('system_id', config['system_id']),
 		('app_key', '0a93e8e18e6ed78fa50c4d74e949801b'),
 	)
 
@@ -229,7 +255,7 @@ def loginCas2(username,password):
 		'Accept': 'text/plain',
 		'User-Agent':'python'
 	}
-	paramscas = urllib.parse.urlencode({
+	paramscas = urllib.urlencode({
 		'service': service,
 		'username': username,
 		'password': password
@@ -243,7 +269,7 @@ def loginCas2(username,password):
 	st = response.text
 	
 	params = (
-		("system_id", 'payutc'),
+		("system_id", config['system_id']),
 		("app_key","0a93e8e18e6ed78fa50c4d74e949801b"),
 	)
 	
@@ -281,12 +307,13 @@ def main(argv):
 	action = ''
 	sessionid = ''
 	inputfile = ''
+	configfile = ''
 	username = ''
 	password = ''
 	fundation = 'null'
-	helper = sys.argv[0] + ' -i <inputfile> -a <addWalletToGroup|addUserToGroup|addWalletRight|addUserRight|addGratuitees> -u <casUsername> -p <casPassword> [-f <fundationid>]'
+	helper = sys.argv[0] + ' -i <inputfile> -c <configfile> -a <addWalletToGroup|addUserToGroup|addWalletRight|addUserRight|addGratuitees> -u <casUsername> -p <casPassword> [-f <fundationid>]'
 	try:
-		opts, args = getopt.getopt(argv,"hp:u:f:i:a:",["help","password","ifile=","action=","username=","fundation="])
+		opts, args = getopt.getopt(argv,"hp:u:f:i:a:c:",["help","password","ifile=","action=","username=","fundation=", "configfile="])
 	except getopt.GetoptError as msg:
 		print(msg)
 		print(helper)
@@ -298,6 +325,12 @@ def main(argv):
 		elif opt in ("-i", "--inputfile"):
 			if os.path.isfile(os.path.abspath(arg)):
 				inputfile = arg			
+			else:
+				print(bcolors.FAIL + "FAIL ( file " + arg + " does not exist )" + bcolors.ENDC)
+				sys.exit(3)
+		elif opt in ("-c", "--configfile"):
+			if os.path.isfile(os.path.abspath(arg)):
+				configfile = arg
 			else:
 				print(bcolors.FAIL + "FAIL ( file " + arg + " does not exist )" + bcolors.ENDC)
 				sys.exit(3)
@@ -316,13 +349,24 @@ def main(argv):
 	if password == '':
 		print("Type CAS password")
 		password = win_getpass()
-	if action == '' or inputfile == '' or fundation == '' or username == '' or password == '':
+	if action == '' or inputfile == '' or configfile == '' or fundation == '' or username == '' or password == '':
 		print("One or more required parameter is missing")
 		print(helper)
 		sys.exit(5)
 	print(username)
 	print(password)
-	sessionid=loginCas2(username,password)['sessionid']
+	global config
+	config = readConfigFile(configfile)
+	global headers
+	if config['nemopay-version']:
+		headers['Nemopay-Version'] = config['nemopay_version']
+	if config['authorization']:
+		headers['Authorization'] = config['authorization']
+	if not config['authorization']:
+		sessionid=loginCas2(username,password)['sessionid']
+	else:
+		sessionid=''
+
 	readCsv(inputfile,action,sessionid,fundation)
 	
 			
